@@ -1,11 +1,6 @@
-import { Component } from '@angular/core';
-import { bootstrapApplication } from '@angular/platform-browser';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { AppModule } from './app/app.module';
 
-@Component({
-    selector: 'app-root',
-    standalone: true,
-    template: '<h1>Swiss Transit Tracker</h1>'
-})
-export class AppComponent { }
-
-bootstrapApplication(AppComponent).catch((error: unknown) => console.error(error));
+platformBrowserDynamic()
+  .bootstrapModule(AppModule)
+  .catch((error: unknown) => console.error(error));
