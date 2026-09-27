@@ -1,77 +1,58 @@
 <header class="topbar">
-  <a class="brand" href="/" aria-label="Swiss Transit Tracker home">
-    <span class="brand-mark">S</span>
-    <span>Swiss Transit Tracker</span>
-  </a>
-  <nav aria-label="Main navigation">
-    <a class="active" href="#connections">Connections</a>
-    <a href="#about">About</a>
-  </nav>
+  <a class="brand" href="/" aria-label="Swiss Transit Tracker home"><span class="brand-mark">S</span><span>Swiss Transit Tracker</span></a>
+  <nav aria-label="Main navigation"><a class="active" href="#connections">Verbindungen</a><a href="#favorites">Favoriten</a></nav>
 </header>
 
 <main>
   <section class="hero">
-    <div class="hero-copy">
-      <p class="eyebrow">Live rail information</p>
-      <h1>Travel across Switzerland<br /><span>without the guesswork.</span></h1>
-      <p class="intro">Find the best connection, check punctuality and get moving with confidence.</p>
-    </div>
-    <div class="hero-art" aria-hidden="true"><span>🚆</span></div>
+    <div><p class="eyebrow">Live rail information</p><h1>Durch die Schweiz<br><span>ohne Umwege.</span></h1><p class="intro">Finde die beste Verbindung, prüfe die Pünktlichkeit und reise entspannt.</p></div>
+    <div class="hero-art" aria-hidden="true">🚆</div>
   </section>
 
-  <section class="search-card" aria-label="Search connections">
-    <div class="field">
-      <label for="from">From</label>
-      <input id="from" [(ngModel)]="from" placeholder="Departure station" />
+  <section class="search-card" aria-label="Verbindungen suchen">
+    <div class="field autocomplete">
+      <label for="from">Von</label>
+      <input id="from" [ngModel]="from" (ngModelChange)="onStationInput('from', $event)" (blur)="closeSuggestions()" autocomplete="off" placeholder="Abfahrtsbahnhof">
+      <div class="suggestions" *ngIf="stationField === 'from' && stations.length">
+        <button type="button" *ngFor="let station of stations" (mousedown)="selectStation(station)">{{ station.name }}<small>{{ station.canton }}</small></button>
+      </div>
     </div>
-    <button class="swap" type="button" aria-label="Swap departure and arrival"
-      (click)="swapStations()">↔</button>
-    <div class="field">
-      <label for="to">To</label>
-      <input id="to" [(ngModel)]="to" placeholder="Arrival station" />
+    <button class="swap" type="button" aria-label="Start und Ziel tauschen" (click)="swapStations()">↔</button>
+    <div class="field autocomplete">
+      <label for="to">Nach</label>
+      <input id="to" [ngModel]="to" (ngModelChange)="onStationInput('to', $event)" (blur)="closeSuggestions()" autocomplete="off" placeholder="Zielbahnhof">
+      <div class="suggestions" *ngIf="stationField === 'to' && stations.length">
+        <button type="button" *ngFor="let station of stations" (mousedown)="selectStation(station)">{{ station.name }}<small>{{ station.canton }}</small></button>
+      </div>
     </div>
-    <div class="field date-field">
-      <label for="date">When</label>
-      <select id="date" [(ngModel)]="date">
-        <option>Today</option>
-        <option>Tomorrow</option>
-      </select>
-    </div>
-    <button class="search-button" type="button" (click)="search()">Search connections <span>→</span></button>
+    <div class="field date-field"><label for="date">Wann</label><select id="date" [(ngModel)]="date"><option value="today">Heute</option><option value="tomorrow">Morgen</option></select></div>
+    <button class="search-button" type="button" (click)="searchConnections()">Verbindungen suchen <span>→</span></button>
   </section>
+
+  <div class="error" *ngIf="error" role="alert">{{ error }}</div>
 
   <section class="content" id="connections">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Recommended for you</p>
-        <h2>{{ from }} <span>→</span> {{ to }}</h2>
-      </div>
-      <span class="updated">Updated just now</span>
-    </div>
-
-    <div class="notice" *ngIf="searched" role="status">
-      Showing the latest connections for <strong>{{ from }}</strong> to <strong>{{ to }}</strong>.
-    </div>
-
+    <div class="section-heading"><div><p class="eyebrow">Deine Reise</p><h2>{{ from }} <span>→</span> {{ to }}</h2></div><button class="favorite-action" type="button" [disabled]="hasFavorite" (click)="addFavorite()">{{ hasFavorite ? '★ Gespeichert' : '☆ Als Favorit speichern' }}</button></div>
+    <div class="notice" *ngIf="searched && !loadingConnections && connections.length">Aktuelle Verbindungen für <strong>{{ from }}</strong> nach <strong>{{ to }}</strong>.</div>
+    <div class="loading" *ngIf="loadingConnections" role="status"><span class="spinner"></span> Verbindungen werden geladen …</div>
+    <div class="empty" *ngIf="!loadingConnections && searched && !connections.length">Keine Verbindungen gefunden. Bitte prüfe die Bahnhöfe und versuche es erneut.</div>
     <div class="connection-list">
       <article class="connection" *ngFor="let connection of connections; let first = first" [class.featured]="first">
-        <div class="time">{{ connection.time }}<small>today</small></div>
-        <div class="route">
-          <div class="route-line"><span class="dot"></span><span>{{ connection.departure }}</span></div>
-          <div class="route-track"><span>{{ connection.duration }} · {{ connection.changes === 0 ? 'Direct' : connection.changes + ' change' }}</span></div>
-          <div class="route-line"><span class="dot arrival"></span><span>{{ connection.arrival }}</span></div>
-        </div>
-        <div class="service"><strong>{{ connection.line }}</strong><span>InterCity</span></div>
-        <div class="status" [class.delayed]="connection.status === 'Delayed'">
-          <span class="status-dot"></span>{{ connection.status }}
-        </div>
-        <button class="details" type="button">Details <span>→</span></button>
+        <div class="time"><strong>{{ connection.departureTime }}</strong><small>Abfahrt</small></div>
+        <div class="route"><div class="route-line"><span class="dot"></span><span>{{ connection.from }}</span></div><div class="route-track">{{ connection.duration }} · {{ connection.changes ? connection.changes + ' Umstieg(e)' : 'Direkt' }}</div><div class="route-line"><span class="dot arrival"></span><span>{{ connection.to }} · {{ connection.arrivalTime }}</span></div></div>
+        <div class="service"><strong>{{ connection.line }}</strong><span>{{ connection.platform ? 'Gleis ' + connection.platform : 'Gleis —' }}</span></div>
+        <div class="status" [class.delayed]="connection.delay"><span class="status-dot"></span>{{ formatDelay(connection.delay) }}</div>
       </article>
     </div>
   </section>
-</main>
 
-<footer id="about">
-  <span>Swiss Transit Tracker</span>
-  <span>Data refreshed in real time · Built for Switzerland</span>
-</footer>
+  <section class="favorites" id="favorites">
+    <div class="section-heading"><div><p class="eyebrow">Gespeicherte Routen</p><h2>Meine Favoriten</h2></div></div>
+    <div class="loading" *ngIf="loadingFavorites"><span class="spinner"></span> Favoriten werden geladen …</div>
+    <div class="favorite-list" *ngIf="!loadingFavorites">
+      <article class="favorite" *ngFor="let favorite of favorites"><div><strong>{{ favorite.fromStation }}</strong><span>→</span><strong>{{ favorite.toStation }}</strong></div><button type="button" (click)="useFavorite(favorite)">Suchen</button><button class="remove" type="button" aria-label="Favorit entfernen" (click)="removeFavorite(favorite)">×</button></article>
+      <p class="empty" *ngIf="!favorites.length">Noch keine Favoriten gespeichert.</p>
+    </div>
+  </section>
+</main>
+<footer><span>Swiss Transit Tracker</span><span>Daten werden in Echtzeit aktualisiert</span></footer>

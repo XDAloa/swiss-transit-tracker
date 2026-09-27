@@ -26,6 +26,23 @@
                         "scripts": []
                     }
                 },
+                "serve": {
+                    "builder": "@angular-devkit/build-angular:dev-server",
+                    "configurations": {
+                        "development": {
+                            "buildTarget": "swiss-transit-tracker-frontend:build"
+                        },
+                        "production": {
+                            "buildTarget": "swiss-transit-tracker-frontend:build"
+                        }
+                    },
+                    "defaultConfiguration": "development",
+                    "options": {
+                        "proxyConfig": "proxy.conf.json",
+                        "host": "localhost",
+                        "port": 4200
+                    }
+                },
                 "test": {
                     "builder": "@angular-devkit/build-angular:karma",
                     "options": {
